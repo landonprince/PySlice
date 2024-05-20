@@ -16,7 +16,7 @@ class PhysicsEntity:
         self.type = e_type
         self.pos = list(pos)
         self.size = size
-        self.velocity = [0, 0]
+        self.velocity = [0.0, 0.0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         self.action = ''
         self.anim_offset = (-3, -3)
@@ -77,7 +77,7 @@ class PhysicsEntity:
             self.flip = True
 
     def apply_gravity(self):
-        self.velocity[1] = min(5, self.velocity[1] + 0.2)
+        self.velocity[1] = min(5.0, self.velocity[1] + 0.2)
         if self.collisions['down'] or self.collisions['up']:
             self.velocity[1] = 0
 
