@@ -76,7 +76,7 @@ class PhysicsEntity:
         self.last_movement = movement
 
         # Apply gravity
-        self.velocity[1] = min(5, self.velocity[1] + 0.1)
+        self.velocity[1] = min(5, self.velocity[1] + 0.2)
 
         # Stop vertical velocity on collision
         if self.collisions['down'] or self.collisions['up']:
@@ -172,12 +172,16 @@ class Player(PhysicsEntity):
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
+        self.speed = 1.5
 
     def update(self, tilemap, movement=(0, 0)):
         # Update player behavior and position
+        movement = (movement[0] * self.speed, movement[1])
         super().update(tilemap, movement=movement)
 
-        self.air_time += 1
+        # Increment air_time only if not wall sliding
+        if not self.wall_slide:
+            self.air_time += 1
 
         # Handle player death if in air for too long
         if self.air_time > 120:
@@ -247,23 +251,22 @@ class Player(PhysicsEntity):
         # Handle player jump mechanics
         if self.wall_slide:
             if self.flip and self.last_movement[0] < 0:
-                self.wall_jump(3.5, -2.5)
+                self.velocity[0] = 2.7
+                self.velocity[1] = -4.0
+                self.air_time = 5
+                self.jumps = max(0, self.jumps - 1)
                 return True
             elif not self.flip and self.last_movement[0] > 0:
-                self.wall_jump(-3.5, -2.5)
+                self.velocity[0] = -2.7
+                self.velocity[1] = -4.0
+                self.air_time = 5
+                self.jumps = max(0, self.jumps - 1)
                 return True
         elif self.jumps:
-            self.velocity[1] = -3
+            self.velocity[1] = -4
             self.jumps -= 1
             self.air_time = 5
             return True
-
-    def wall_jump(self, x_vel, y_vel):
-        # Execute a wall jump
-        self.velocity[0] = x_vel
-        self.velocity[1] = y_vel
-        self.air_time = 5
-        self.jumps = max(0, self.jumps - 1)
 
     def dash(self):
         # Handle player dash mechanics
