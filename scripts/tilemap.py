@@ -1,7 +1,6 @@
 import json
 import pygame
 
-# Define autotile map for different neighbor configurations
 AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (0, 1)])): 0,
     tuple(sorted([(1, 0), (0, 1), (-1, 0)])): 1,
@@ -14,34 +13,29 @@ AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (-1, 0), (0, 1), (0, -1)])): 8,
 }
 
-# Define neighbor offsets for checking adjacent tiles
 NEIGHBOR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)]
 
-# Define tiles that have physics
 PHYSICS_TILES = {'grass', 'stone'}
-
-# Define tiles that are compatible with autotile
 AUTOTILE_TYPES = {'grass', 'stone'}
 
 
 class Tilemap:
     def __init__(self, game, tile_size=16):
-        # Initialize tilemap properties
         self.game = game
         self.tile_size = tile_size
         self.tilemap = {}
         self.offgrid_tiles = []
 
     def extract(self, id_pairs, keep=False):
-        # Extract matching tiles from the offgrid tiles
         matches = []
+        # Extract from offgrid tiles
         for tile in self.offgrid_tiles.copy():
             if (tile['type'], tile['variant']) in id_pairs:
                 matches.append(tile.copy())
                 if not keep:
                     self.offgrid_tiles.remove(tile)
 
-        # Extract matching tiles from the ongrid tiles
+        # Extract from ongrid tiles
         for loc in self.tilemap:
             tile = self.tilemap[loc]
             if (tile['type'], tile['variant']) in id_pairs:
@@ -55,7 +49,6 @@ class Tilemap:
         return matches
 
     def tiles_around(self, pos):
-        # Get tiles around a given position
         tiles = []
         tile_loc = (int(pos[0] // self.tile_size), int(pos[1] // self.tile_size))
         for offset in NEIGHBOR_OFFSETS:
@@ -65,13 +58,11 @@ class Tilemap:
         return tiles
 
     def save(self, path):
-        # Save the tilemap to a file
         f = open(path, 'w')
         json.dump({'tilemap': self.tilemap, 'tile_size': self.tile_size, 'offgrid': self.offgrid_tiles}, f)
         f.close()
 
     def load(self, path):
-        # Load the tilemap from a file
         f = open(path, 'r')
         map_data = json.load(f)
         f.close()
@@ -81,14 +72,12 @@ class Tilemap:
         self.offgrid_tiles = map_data['offgrid']
 
     def solid_check(self, pos):
-        # Check if a position is occupied by a solid tile
         tile_loc = str(int(pos[0] // self.tile_size)) + ';' + str(int(pos[1] // self.tile_size))
         if tile_loc in self.tilemap:
             if self.tilemap[tile_loc]['type'] in PHYSICS_TILES:
                 return self.tilemap[tile_loc]
 
     def physics_rects_around(self, pos):
-        # Get physics rects for tiles around a given position
         rects = []
         for tile in self.tiles_around(pos):
             if tile['type'] in PHYSICS_TILES:
@@ -98,7 +87,6 @@ class Tilemap:
         return rects
 
     def autotile(self):
-        # Automatically set tile variants based on their neighbors
         for loc in self.tilemap:
             tile = self.tilemap[loc]
             neighbors = set()

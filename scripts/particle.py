@@ -1,6 +1,5 @@
 class Particle:
     def __init__(self, game, p_type, pos, velocity=[0, 0], frame=0):
-        # Initialize particle properties
         self.game = game
         self.type = p_type
         self.pos = list(pos)
@@ -9,7 +8,6 @@ class Particle:
         self.animation.frame = frame
 
     def update(self):
-        # Update particle position and animation
         kill = False
         if self.animation.done:
             kill = True
@@ -22,7 +20,6 @@ class Particle:
         return kill
 
     def render(self, surf, offset=(0, 0)):
-        # Render the particle on the given surface with offset
         img = self.animation.img()
         surf.blit(img, (self.pos[0] - offset[0] - img.get_width() // 2,
                         self.pos[1] - offset[1] - img.get_height() // 2))
