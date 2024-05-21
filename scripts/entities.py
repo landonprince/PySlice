@@ -163,6 +163,9 @@ class Enemy(PhysicsEntity):
         self.game.particles.append(Particle(self.game, 'blood', self.rect().center))
         self.create_collision_effects()
 
+        for _ in range(1):
+            self.game.particles.append(Particle(self.game, 'coin', self.rect().center))
+
     def create_collision_effects(self):
         for i in range(30):
             angle = random.random() * math.pi * 2

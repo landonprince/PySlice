@@ -6,7 +6,11 @@ BASE_IMG_PATH = 'assets/images/'
 
 def load_image(path):
     img = pygame.image.load(BASE_IMG_PATH + path).convert()
-    img.set_colorkey((0, 0, 0))
+    if 'coin' not in path:
+        img.set_colorkey((0, 0, 0))
+    else:
+        width, height = img.get_size()
+        img = pygame.transform.scale(img, (int(width * .09), int(height * .09)))
     return img
 
 
