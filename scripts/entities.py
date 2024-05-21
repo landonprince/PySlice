@@ -116,33 +116,25 @@ class Enemy(PhysicsEntity):
         else:
             self.flip = not self.flip
         self.walking = max(0, self.walking - 1)
-        self.shoot_projectiles_if_needed()
+        self.shoot_projectile()
         return movement
 
-    def shoot_projectiles_if_needed(self):
+    def shoot_projectile(self):
         if not self.walking:
             dis = (self.game.player.pos[0] - self.pos[0], self.game.player.pos[1] - self.pos[1])
             if abs(dis[1]) < 16:
-                self.shoot_projectile(dis)
-
-    def shoot_projectile(self, dis):
-        if self.flip and dis[0] < 0:
-            self.shoot_left()
-        if not self.flip and dis[0] > 0:
-            self.shoot_right()
-
-    def shoot_left(self):
-        self.game.sfx['shoot'].play()
-        self.game.projectiles.append([[self.rect().centerx - 7, self.rect().centery], -1.5, 0])
-        for i in range(4):
-            self.game.sparks.append(Spark(self.game.projectiles[-1][0], random.random() - 0.5 + math.pi,
-                                          2 + random.random()))
-
-    def shoot_right(self):
-        self.game.sfx['shoot'].play()
-        self.game.projectiles.append([[self.rect().centerx + 7, self.rect().centery], 1.5, 0])
-        for i in range(4):
-            self.game.sparks.append(Spark(self.game.projectiles[-1][0], random.random() - 0.5, 2 + random.random()))
+                if self.flip and dis[0] < 0:
+                    self.game.sfx['shoot'].play()
+                    self.game.projectiles.append([[self.rect().centerx - 7, self.rect().centery], -1.5, 0])
+                    for i in range(4):
+                        self.game.sparks.append(
+                            Spark(self.game.projectiles[-1][0], random.random() - 0.5 + math.pi, 2 + random.random()))
+                if not self.flip and dis[0] > 0:
+                    self.game.sfx['shoot'].play()
+                    self.game.projectiles.append([[self.rect().centerx + 7, self.rect().centery], 1.5, 0])
+                    for i in range(4):
+                        self.game.sparks.append(Spark(self.game.projectiles[-1][0],
+                                                      random.random() - 0.5, 2 + random.random()))
 
     def update_action(self, movement):
         if movement[0] != 0:

@@ -54,6 +54,7 @@ class Game:
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'particle/blood': Animation(load_images('particles/blood'), img_dur=1, loop=False),
             'particle/coin': Animation(load_images('particles/coin'), img_dur=5, loop=True),
+            'ui/coin': Animation(load_images('ui/coin'), img_dur=5, loop=True),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
         }
@@ -191,7 +192,7 @@ class Game:
 
     def update_and_render_projectiles(self, render_scroll):
         for projectile in self.projectiles.copy():
-            projectile[0][0] += projectile[1]
+            projectile[0][0] += projectile[1] * 1.5
             projectile[2] += 1
             img = self.assets['projectile']
             self.display.blit(img, (projectile[0][0] - img.get_width() / 2 - render_scroll[0],
@@ -342,6 +343,34 @@ class Game:
             self.screen.blit(border_surface, pos)
 
         self.screen.blit(text_surface, (x, y))
+
+        self.assets['ui/coin'].update()
+        coin = self.assets['ui/coin'].img()
+        large_coin = pygame.transform.scale(coin, (int(coin.get_width() * 2.5), int(coin.get_height() * 2.5)))
+
+        coin_x, coin_y = x, y + text_surface.get_height() + 5
+        self.screen.blit(large_coin, (coin_x, coin_y))
+
+        # Blit the coin count text
+        coin_count_text = f"{self.coin_count}"
+        coin_count_surface = self.font.render(coin_count_text, True, (255, 223, 0))  # Gold color
+        coin_count_x = coin_x + large_coin.get_width() + 8  # Adjusted to be more to the right
+        coin_count_y = coin_y + large_coin.get_height() - 22
+        coin_border_positions = [
+            (coin_count_x - border_size, coin_count_y),
+            (coin_count_x + border_size, coin_count_y),
+            (coin_count_x, coin_count_y - border_size),
+            (coin_count_x, coin_count_y + border_size),
+            (coin_count_x - border_size, coin_count_y - border_size),
+            (coin_count_x + border_size, coin_count_y - border_size),
+            (coin_count_x - border_size, coin_count_y + border_size),
+            (coin_count_x + border_size, coin_count_y + border_size),
+        ]
+        for pos in coin_border_positions:
+            coin_border_surface = self.font.render(coin_count_text, True, (0, 0, 0))
+            self.screen.blit(coin_border_surface, pos)
+
+        self.screen.blit(coin_count_surface, (coin_count_x, coin_count_y))
 
     def render_final_display(self):
         self.display_2.blit(self.display, (0, 0))
