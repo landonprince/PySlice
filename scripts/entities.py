@@ -34,7 +34,7 @@ class PhysicsEntity:
     def update(self, tilemap, movement=(0, 0)):
         self.handle_collisions(tilemap, movement)
         self.apply_gravity()
-        self.update_animation()
+        self.animation.update()
 
     def handle_collisions(self, tilemap, movement):
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
@@ -81,9 +81,6 @@ class PhysicsEntity:
         if self.collisions['down'] or self.collisions['up']:
             self.velocity[1] = 0
 
-    def update_animation(self):
-        self.animation.update()
-
     def render(self, surf, offset=(0, 0)):
         surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False),
                   (self.pos[0] - offset[0] + self.anim_offset[0], self.pos[1] - offset[1] + self.anim_offset[1]))
@@ -102,21 +99,17 @@ class Enemy(PhysicsEntity):
 
     def update_behavior(self, tilemap, movement):
         if self.walking:
-            movement = self.handle_walking(tilemap, movement)
+            if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
+                if self.collisions['right'] or self.collisions['left']:
+                    self.flip = not self.flip
+                else:
+                    movement = (movement[0] - 0.5 if self.flip else 0.5, movement[1])
+            else:
+                self.flip = not self.flip
+            self.walking = max(0, self.walking - 1)
+            self.shoot_projectile()
         elif random.random() < 0.01:
             self.walking = random.randint(30, 120)
-        return movement
-
-    def handle_walking(self, tilemap, movement):
-        if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
-            if self.collisions['right'] or self.collisions['left']:
-                self.flip = not self.flip
-            else:
-                movement = (movement[0] - 0.5 if self.flip else 0.5, movement[1])
-        else:
-            self.flip = not self.flip
-        self.walking = max(0, self.walking - 1)
-        self.shoot_projectile()
         return movement
 
     def shoot_projectile(self):
@@ -145,18 +138,15 @@ class Enemy(PhysicsEntity):
     def handle_collision_with_player(self):
         if abs(self.game.player.dashing) >= 50:
             if self.rect().colliderect(self.game.player.rect()):
-                self.handle_player_collision()
+                self.game.screenshake = max(16, self.game.screenshake)
+                self.game.sfx['hit'].play()
+                self.game.particles.append(Particle(self.game, 'blood', self.rect().center))
+                self.create_collision_effects()
+
+                for i in range(1):
+                    self.game.particles.append(Particle(self.game, 'coin', self.rect().center))
                 return True
         return False
-
-    def handle_player_collision(self):
-        self.game.screenshake = max(16, self.game.screenshake)
-        self.game.sfx['hit'].play()
-        self.game.particles.append(Particle(self.game, 'blood', self.rect().center))
-        self.create_collision_effects()
-
-        for _ in range(1):
-            self.game.particles.append(Particle(self.game, 'coin', self.rect().center))
 
     def create_collision_effects(self):
         for i in range(30):
@@ -198,14 +188,14 @@ class Player(PhysicsEntity):
     def update(self, tilemap, movement=(0, 0)):
         movement = (movement[0] * self.speed, movement[1])
         super().update(tilemap, movement)
-        self.handle_air_time()
+        self.update_air_time()
         self.handle_landing()
         self.handle_wall_slide()
-        self.handle_action()
-        self.handle_dash_effects()
+        self.update_action()
+        self.handle_dash()
         self.apply_friction()
 
-    def handle_air_time(self):
+    def update_air_time(self):
         if not self.wall_slide:
             self.air_time += 1
         if self.air_time > 120 and not self.game.dead:
@@ -225,7 +215,7 @@ class Player(PhysicsEntity):
             self.flip = not self.collisions['right']
             self.set_action('wall_slide')
 
-    def handle_action(self):
+    def update_action(self):
         if not self.wall_slide:
             if self.air_time > 4:
                 self.set_action('jump')
@@ -234,7 +224,7 @@ class Player(PhysicsEntity):
             else:
                 self.set_action('idle')
 
-    def handle_dash_effects(self):
+    def handle_dash(self):
         if abs(self.dashing) in {60, 50}:
             self.create_dash_particles()
         self.update_dash_state()
@@ -277,6 +267,18 @@ class Player(PhysicsEntity):
     def render(self, surf, offset=(0, 0)):
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
+            self.render_katana(surf, offset)
+
+    def render_katana(self, surf, offset):
+        katana_image = pygame.transform.rotate(self.game.assets['katana'], -20)
+
+        if self.flip:
+            katana_image = pygame.transform.flip(katana_image, True, False)
+            surf.blit(katana_image,
+                      (self.rect().centerx - katana_image.get_width() + 8 - offset[0],
+                       self.rect().centery - 20 - offset[1]))
+        else:
+            surf.blit(katana_image, (self.rect().centerx - 8 - offset[0], self.rect().centery - 20 - offset[1]))
 
     def jump(self):
         if self.wall_slide:

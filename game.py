@@ -56,6 +56,7 @@ class Game:
             'particle/coin': Animation(load_images('particles/coin'), img_dur=5, loop=True),
             'ui/coin': Animation(load_images('ui/coin'), img_dur=5, loop=True),
             'gun': load_image('gun.png'),
+            'katana': load_image('katana.png'),
             'projectile': load_image('projectile.png'),
         }
 
@@ -68,13 +69,10 @@ class Game:
             'coin': pygame.mixer.Sound('assets/sfx/coin.wav'),
             'ambience': pygame.mixer.Sound('assets/sfx/ambience.wav'),
         }
-        self.set_sfx_volumes()
-
-    def set_sfx_volumes(self):
         self.sfx['ambience'].set_volume(0.2)
         self.sfx['shoot'].set_volume(0.4)
         self.sfx['hit'].set_volume(0.8)
-        self.sfx['dash'].set_volume(0.3)
+        self.sfx['dash'].set_volume(0.2)
         self.sfx['jump'].set_volume(0.7)
         self.sfx['coin'].set_volume(0.3)
 
@@ -85,12 +83,14 @@ class Game:
         self.level = 0
         self.screenshake = 0
         self.coin_count = 0
+        self.projectiles = []
+        self.particles = []
+        self.sparks = []
 
     def load_level(self, map_id):
         self.tilemap.load('assets/maps/' + str(map_id) + '.json')
         self.create_leaf_spawners()
-        self.create_enemies_and_set_player_position()
-        self.initialize_projectiles_particles_and_sparks()
+        self.set_entity_position()
         self.scroll = [0, 0]
         self.dead = 0
         self.transition = -30
@@ -101,7 +101,7 @@ class Game:
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
-    def create_enemies_and_set_player_position(self):
+    def set_entity_position(self):
         self.enemies = []
         for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
             if spawner['variant'] == 0:
@@ -110,13 +110,10 @@ class Game:
             else:
                 self.enemies.append(Enemy(self, spawner['pos'], (8, 15)))
 
-    def initialize_projectiles_particles_and_sparks(self):
-        self.projectiles = []
-        self.particles = []
-        self.sparks = []
-
     def run(self):
-        self.play_background_music()
+        pygame.mixer.music.load('assets/music.wav')
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
 
         while True:
@@ -124,7 +121,7 @@ class Game:
             self.decrease_screenshake()
             self.handle_level_transition()
             self.handle_player_death()
-            render_scroll = self.update_scroll_based_on_player_position()
+            render_scroll = self.update_scroll()
             self.spawn_leaf_particles()
             self.clouds.update()
             self.clouds.render(self.display_2, offset=render_scroll)
@@ -140,11 +137,6 @@ class Game:
             self.render_final_display()
             self.clock.tick(60)
 
-    def play_background_music(self):
-        pygame.mixer.music.load('assets/music.wav')
-        pygame.mixer.music.set_volume(0.5)
-        pygame.mixer.music.play(-1)
-
     def clear_display(self):
         self.display.fill((0, 0, 0, 0))
         self.display_2.blit(self.assets['background'], (0, 0))
@@ -156,7 +148,7 @@ class Game:
         if not len(self.enemies):
             if self.level_transition_delay == 0:
                 self.level_transition_delay = pygame.time.get_ticks()
-            elif pygame.time.get_ticks() - self.level_transition_delay >= 500:
+            elif pygame.time.get_ticks() - self.level_transition_delay >= 750:
                 self.transition += 1
                 if self.transition > 30:
                     self.level = min(self.level + 1, len(os.listdir('assets/maps')) - 1)
@@ -173,7 +165,7 @@ class Game:
             if self.dead > 40:
                 self.load_level(self.level)
 
-    def update_scroll_based_on_player_position(self):
+    def update_scroll(self):
         self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
         self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
         return int(self.scroll[0]), int(self.scroll[1])

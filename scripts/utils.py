@@ -6,11 +6,15 @@ BASE_IMG_PATH = 'assets/images/'
 
 def load_image(path):
     img = pygame.image.load(BASE_IMG_PATH + path).convert()
-    if 'coin' not in path:
-        img.set_colorkey((0, 0, 0))
-    else:
+    if 'coin' in path:
         width, height = img.get_size()
         img = pygame.transform.scale(img, (int(width * .09), int(height * .09)))
+    elif 'katana' in path:
+        img.set_colorkey((0, 0, 0))
+        width, height = img.get_size()
+        img = pygame.transform.scale(img, (int(width * 1), int(height * 1)))
+    else:
+        img.set_colorkey((0, 0, 0))
     return img
 
 
