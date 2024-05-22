@@ -64,7 +64,8 @@ class Game:
             'jump': pygame.mixer.Sound('assets/sfx/jump.wav'),
             'dash': pygame.mixer.Sound('assets/sfx/dash.wav'),
             'hit': pygame.mixer.Sound('assets/sfx/hit.wav'),
-            'shoot': pygame.mixer.Sound('assets/sfx/shoot.wav'),
+            'shoot': pygame.mixer.Sound('assets/sfx/shoot.mp3'),
+            'coin': pygame.mixer.Sound('assets/sfx/coin.wav'),
             'ambience': pygame.mixer.Sound('assets/sfx/ambience.wav'),
         }
         self.set_sfx_volumes()
@@ -75,6 +76,7 @@ class Game:
         self.sfx['hit'].set_volume(0.8)
         self.sfx['dash'].set_volume(0.3)
         self.sfx['jump'].set_volume(0.7)
+        self.sfx['coin'].set_volume(0.3)
 
     def initialize_game_objects(self):
         self.clouds = Clouds(self.assets['clouds'], count=16)
@@ -92,6 +94,7 @@ class Game:
         self.scroll = [0, 0]
         self.dead = 0
         self.transition = -30
+        self.level_transition_delay = 0
 
     def create_leaf_spawners(self):
         self.leaf_spawners = []
@@ -151,10 +154,14 @@ class Game:
 
     def handle_level_transition(self):
         if not len(self.enemies):
-            self.transition += 1
-            if self.transition > 30:
-                self.level = min(self.level + 1, len(os.listdir('assets/maps')) - 1)
-                self.load_level(self.level)
+            if self.level_transition_delay == 0:
+                self.level_transition_delay = pygame.time.get_ticks()
+            elif pygame.time.get_ticks() - self.level_transition_delay >= 500:
+                self.transition += 1
+                if self.transition > 30:
+                    self.level = min(self.level + 1, len(os.listdir('assets/maps')) - 1)
+                    self.load_level(self.level)
+                    self.level_transition_delay = 0
         if self.transition < 0:
             self.transition += 1
 
@@ -231,6 +238,15 @@ class Game:
             if kill:
                 self.sparks.remove(spark)
 
+    def create_display_silhouette(self):
+        display_mask = pygame.mask.from_surface(self.display)
+        display_silhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
+        shadow = display_mask.to_surface(setcolor=(0, 0, 0, 75), unsetcolor=(0, 0, 0, 0))
+
+        for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            self.display_2.blit(display_silhouette, offset)
+        self.display_2.blit(shadow, (4, 4))
+
     def update_and_render_particles(self, render_scroll):
         for particle in self.particles.copy():
             kill = particle.update()
@@ -269,16 +285,8 @@ class Game:
             particle.pos[0] += math.cos(direction) * 5
             particle.pos[1] += math.sin(direction) * 5
             if math.hypot(particle.pos[0] - self.player.pos[0], particle.pos[1] - self.player.pos[1]) <= 3:
+                self.sfx['coin'].play()
                 return True
-
-    def create_display_silhouette(self):
-        display_mask = pygame.mask.from_surface(self.display)
-        display_silhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
-        shadow = display_mask.to_surface(setcolor=(0, 0, 0, 75), unsetcolor=(0, 0, 0, 0))
-
-        for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            self.display_2.blit(display_silhouette, offset)
-        self.display_2.blit(shadow, (4, 4))
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -351,10 +359,9 @@ class Game:
         coin_x, coin_y = x, y + text_surface.get_height() + 5
         self.screen.blit(large_coin, (coin_x, coin_y))
 
-        # Blit the coin count text
         coin_count_text = f"{self.coin_count}"
-        coin_count_surface = self.font.render(coin_count_text, True, (255, 223, 0))  # Gold color
-        coin_count_x = coin_x + large_coin.get_width() + 8  # Adjusted to be more to the right
+        coin_count_surface = self.font.render(coin_count_text, True, (255, 223, 0))
+        coin_count_x = coin_x + large_coin.get_width() + 8
         coin_count_y = coin_y + large_coin.get_height() - 22
         coin_border_positions = [
             (coin_count_x - border_size, coin_count_y),
