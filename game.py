@@ -90,7 +90,7 @@ class Game:
     def load_level(self, map_id):
         self.tilemap.load('assets/maps/' + str(map_id) + '.json')
         self.create_leaf_spawners()
-        self.set_entity_position()
+        self.spawn_entities()
         self.scroll = [0, 0]
         self.dead = 0
         self.transition = -30
@@ -101,7 +101,7 @@ class Game:
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
-    def set_entity_position(self):
+    def spawn_entities(self):
         self.enemies = []
         for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
             if spawner['variant'] == 0:
@@ -118,7 +118,6 @@ class Game:
 
         while True:
             self.clear_display()
-            self.decrease_screenshake()
             self.handle_level_transition()
             self.handle_player_death()
             render_scroll = self.update_scroll()
@@ -140,8 +139,6 @@ class Game:
     def clear_display(self):
         self.display.fill((0, 0, 0, 0))
         self.display_2.blit(self.assets['background'], (0, 0))
-
-    def decrease_screenshake(self):
         self.screenshake = max(0, self.screenshake - 1)
 
     def handle_level_transition(self):

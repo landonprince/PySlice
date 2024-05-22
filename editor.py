@@ -49,7 +49,7 @@ class Editor:
         try:
             self.tilemap.load('map.json')
         except FileNotFoundError:
-            pass
+            print('Map file not found')
 
     def run(self):
         while True:

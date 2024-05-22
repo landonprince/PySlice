@@ -226,37 +226,31 @@ class Player(PhysicsEntity):
 
     def handle_dash(self):
         if abs(self.dashing) in {60, 50}:
-            self.create_dash_particles()
-        self.update_dash_state()
-        if abs(self.dashing) > 50:
-            self.apply_dash_velocity()
-            self.create_dash_trail()
+            for i in range(20):
+                angle = random.random() * math.pi * 2
+                speed = random.random() * 0.5 + 0.5
+                pvelocity = [math.cos(angle) * speed, math.sin(angle) * speed]
+                self.game.particles.append(
+                    Particle(self.game, 'particle', self.rect().center, velocity=pvelocity,
+                             frame=random.randint(0, 7)))
 
-    def create_dash_particles(self):
-        for i in range(20):
-            angle = random.random() * math.pi * 2
-            speed = random.random() * 0.5 + 0.5
-            pvelocity = [math.cos(angle) * speed, math.sin(angle) * speed]
-            self.game.particles.append(
-                Particle(self.game, 'particle', self.rect().center, velocity=pvelocity,
-                         frame=random.randint(0, 7)))
+        self.update_dash_state()
+
+        if abs(self.dashing) > 50:
+            self.game.screenshake = max(16, self.game.screenshake)
+            self.velocity[0] = abs(self.dashing) / self.dashing * 8
+            if abs(self.dashing) == 51:
+                self.velocity[0] *= 0.1
+
+            pvelocity = [abs(self.dashing) / self.dashing * random.random() * 3, 0]
+            self.game.particles.append(Particle(self.game, 'particle', self.rect().center, velocity=pvelocity,
+                                                frame=random.randint(0, 7)))
 
     def update_dash_state(self):
         if self.dashing > 0:
             self.dashing = max(0, self.dashing - 1)
         if self.dashing < 0:
             self.dashing = min(0, self.dashing + 1)
-
-    def apply_dash_velocity(self):
-        self.velocity[0] = abs(self.dashing) / self.dashing * 8
-        if abs(self.dashing) == 51:
-            self.velocity[0] *= 0.1
-
-    def create_dash_trail(self):
-        pvelocity = [abs(self.dashing) / self.dashing * random.random() * 3, 0]
-        self.game.particles.append(
-            Particle(self.game, 'particle', self.rect().center, velocity=pvelocity,
-                     frame=random.randint(0, 7)))
 
     def apply_friction(self):
         if self.velocity[0] > 0:
