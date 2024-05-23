@@ -177,7 +177,6 @@ class Enemy(PhysicsEntity):
                      [x_velocity, angle_offset], i * 10, 'rifle', 1,
                      i * 5])
         return projectiles
-    # handle rifle delay, [4] is bullet movement delay, [5] is sfx delay
 
     def add_sparks(self, position):
         for _ in range(4):
