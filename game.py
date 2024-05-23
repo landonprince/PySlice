@@ -56,6 +56,8 @@ class Game:
             'particle/coin': Animation(load_images('particles/coin'), img_dur=5, loop=True),
             'ui/coin': Animation(load_images('ui/coin'), img_dur=5, loop=True),
             'gun': load_image('gun.png'),
+            'shotgun': load_image('shotgun.png'),
+            'rifle': load_image('rifle.png'),
             'katana': load_image('katana.png'),
             'projectile': load_image('projectile.png'),
         }
@@ -66,11 +68,15 @@ class Game:
             'dash': pygame.mixer.Sound('assets/sfx/dash.wav'),
             'hit': pygame.mixer.Sound('assets/sfx/hit.wav'),
             'shoot': pygame.mixer.Sound('assets/sfx/shoot.mp3'),
+            'shotgun': pygame.mixer.Sound('assets/sfx/shotgun.mp3'),
+            'rifle': pygame.mixer.Sound('assets/sfx/rifle.mp3'),
             'coin': pygame.mixer.Sound('assets/sfx/coin.wav'),
             'ambience': pygame.mixer.Sound('assets/sfx/ambience.wav'),
         }
         self.sfx['ambience'].set_volume(0.2)
         self.sfx['shoot'].set_volume(0.4)
+        self.sfx['shotgun'].set_volume(0.3)
+        self.sfx['rifle'].set_volume(0.3)
         self.sfx['hit'].set_volume(0.8)
         self.sfx['dash'].set_volume(0.2)
         self.sfx['jump'].set_volume(0.7)
@@ -188,37 +194,64 @@ class Game:
 
     def update_and_render_projectiles(self, render_scroll):
         for projectile in self.projectiles.copy():
-            projectile[0][0] += projectile[1] * 1.5
-            projectile[2] += 1
+            self.update_projectile_delay(projectile)
+            self.handle_projectile_movement(projectile)
+
             img = self.assets['projectile']
             self.display.blit(img, (projectile[0][0] - img.get_width() / 2 - render_scroll[0],
                                     projectile[0][1] - img.get_height() / 2 - render_scroll[1]))
 
             if self.tilemap.solid_check(projectile[0]):
-                self.projectiles.remove(projectile)
-                for i in range(4):
-                    self.sparks.append(
-                        Spark(projectile[0], random.random() - 0.5 + (math.pi if projectile[1] > 0 else 0),
-                              2 + random.random()))
-
+                self.handle_projectile_collision(projectile)
             elif projectile[2] > 360:
                 self.projectiles.remove(projectile)
+            elif abs(self.player.dashing) < 50 and self.player.rect().collidepoint(projectile[0]):
+                self.handle_player_hit(projectile)
 
-            elif abs(self.player.dashing) < 50:
-                if self.player.rect().collidepoint(projectile[0]):
-                    self.projectiles.remove(projectile)
-                    self.dead += 1
-                    self.sfx['hit'].play()
-                    self.screenshake = max(16, self.screenshake)
-                    self.particles.append(Particle(self, 'blood', self.player.rect().center))
-                    for i in range(30):
-                        angle = random.random() * math.pi * 2
-                        speed = random.random() * 5
-                        self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
-                        self.particles.append(Particle(self, 'particle', self.player.rect().center,
-                                                       velocity=[math.cos(angle + math.pi) * speed * 0.5,
-                                                                 math.sin(angle + math.pi) * speed * 0.5],
-                                                       frame=random.randint(0, 7)))
+    def update_projectile_delay(self, projectile):
+        if projectile[2] > 0:
+            projectile[2] -= 1
+        if projectile[5] > 0:
+            projectile[5] -= 1
+        elif projectile[3] == 'rifle' and projectile[5] == 0:
+            self.sfx['rifle'].play()
+            projectile[5] = -1
+
+    def handle_projectile_movement(self, projectile):
+        weapon_type = projectile[3]
+
+        if projectile[4] == 0 or projectile[2] <= 0:
+            if weapon_type == 'gun':
+                projectile[0][0] += projectile[1][0] * 1.5
+            elif weapon_type == 'shotgun':
+                projectile[0][0] += projectile[1][0]
+                projectile[0][1] += projectile[1][1]
+            elif weapon_type == 'rifle':
+                projectile[0][0] += projectile[1][0] * 2.0
+                projectile[0][1] += projectile[1][1] * 1.0
+
+        projectile[2] += 1 if projectile[4] == 0 else 0
+
+    def handle_projectile_collision(self, projectile):
+        self.projectiles.remove(projectile)
+        for _ in range(4):
+            self.sparks.append(Spark(projectile[0], random.random() - 0.5 + (math.pi if projectile[1][0] > 0 else 0),
+                                     2 + random.random()))
+
+    def handle_player_hit(self, projectile):
+        self.projectiles.remove(projectile)
+        self.dead += 1
+        self.sfx['hit'].play()
+        self.screenshake = max(16, self.screenshake)
+        self.particles.append(Particle(self, 'blood', self.player.rect().center))
+        for _ in range(30):
+            angle = random.random() * math.pi * 2
+            speed = random.random() * 5
+            self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
+            self.particles.append(Particle(self, 'particle', self.player.rect().center,
+                                           velocity=[math.cos(angle + math.pi) * speed * 0.5,
+                                                     math.sin(angle + math.pi) * speed * 0.5],
+                                           frame=random.randint(0, 7)))
 
     def update_and_render_sparks(self, render_scroll):
         for spark in self.sparks.copy():

@@ -90,6 +90,7 @@ class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size):
         super().__init__(game, 'enemy', pos, size)
         self.walking = 0
+        self.weapon = random.choice(['gun', 'rifle', 'shotgun'])
 
     def update(self, tilemap, movement=(0, 0)):
         movement = self.update_behavior(tilemap, movement)
@@ -112,22 +113,76 @@ class Enemy(PhysicsEntity):
             self.walking = random.randint(30, 120)
         return movement
 
+    import random
+
     def shoot_projectile(self):
-        if not self.walking:
-            dis = (self.game.player.pos[0] - self.pos[0], self.game.player.pos[1] - self.pos[1])
-            if abs(dis[1]) < 16:
-                if self.flip and dis[0] < 0:
-                    self.game.sfx['shoot'].play()
-                    self.game.projectiles.append([[self.rect().centerx - 7, self.rect().centery], -1.5, 0])
-                    for i in range(4):
-                        self.game.sparks.append(
-                            Spark(self.game.projectiles[-1][0], random.random() - 0.5 + math.pi, 2 + random.random()))
-                if not self.flip and dis[0] > 0:
-                    self.game.sfx['shoot'].play()
-                    self.game.projectiles.append([[self.rect().centerx + 7, self.rect().centery], 1.5, 0])
-                    for i in range(4):
-                        self.game.sparks.append(Spark(self.game.projectiles[-1][0],
-                                                      random.random() - 0.5, 2 + random.random()))
+        if self.walking:
+            return
+
+        dis = (self.game.player.pos[0] - self.pos[0], self.game.player.pos[1] - self.pos[1])
+        if abs(dis[1]) >= 16:
+            return
+
+        projectiles_to_add = self.create_projectiles(dis)
+
+        for projectile in projectiles_to_add:
+            self.game.projectiles.append(projectile)
+            self.add_sparks(projectile[0])
+
+    def create_projectiles(self, dis):
+        projectiles_to_add = []
+        if self.flip and dis[0] < 0:
+            if self.weapon == 'gun':
+                self.game.sfx['shoot'].play()
+                projectiles_to_add.append([[self.rect().centerx - 7, self.rect().centery],
+                                           [-1.5, 0], 0, 'gun', 0, 0])
+            elif self.weapon == 'shotgun':
+                self.game.sfx['shotgun'].play()
+                projectiles_to_add.extend(self.create_shotgun_projectiles(-1.5))
+            elif self.weapon == 'rifle':
+                projectiles_to_add.extend(self.create_rifle_projectiles(-1.5))
+        elif not self.flip and dis[0] > 0:
+            if self.weapon == 'gun':
+                self.game.sfx['shoot'].play()
+                projectiles_to_add.append([[self.rect().centerx + 7, self.rect().centery],
+                                           [1.5, 0], 0, 'gun', 0, 0])
+            elif self.weapon == 'shotgun':
+                self.game.sfx['shotgun'].play()
+                projectiles_to_add.extend(self.create_shotgun_projectiles(1.5))
+            elif self.weapon == 'rifle':
+                projectiles_to_add.extend(self.create_rifle_projectiles(1.5))
+        return projectiles_to_add
+
+    def create_shotgun_projectiles(self, x_velocity):
+        if self.flip:
+            return [[[self.rect().centerx - 20, self.rect().centery],
+                     [x_velocity * random.uniform(1.2, 1.5), spread], 0, 'shotgun', 0, 0]
+                    for spread in [-0.15, -0.075, 0, 0.075, 0.15]]
+        else:
+            return [[[self.rect().centerx + 20, self.rect().centery],
+                     [x_velocity * random.uniform(1.2, 1.5), spread], 0, 'shotgun', 0, 0]
+                    for spread in [-0.15, -0.075, 0, 0.075, 0.15]]
+
+    def create_rifle_projectiles(self, x_velocity):
+        projectiles = []
+        for i in range(3):
+            angle_offset = random.uniform(-0.2, 0.2)
+            if self.flip:
+                projectiles.append(
+                    [[self.rect().centerx - 20, self.rect().centery],
+                     [x_velocity, angle_offset], i * 10, 'rifle', 1, i * 5])
+            else:
+                projectiles.append(
+                    [[self.rect().centerx + 20, self.rect().centery],
+                     [x_velocity, angle_offset], i * 10, 'rifle', 1,
+                     i * 5])
+        return projectiles
+    # handle rifle delay, [4] is bullet movement delay, [5] is sfx delay
+
+    def add_sparks(self, position):
+        for _ in range(4):
+            self.game.sparks.append(
+                Spark(position, random.random() - 0.5 + (math.pi if self.flip else 0), 2 + random.random()))
 
     def update_action(self, movement):
         if movement[0] != 0:
@@ -165,12 +220,31 @@ class Enemy(PhysicsEntity):
         self.render_gun(surf, offset)
 
     def render_gun(self, surf, offset):
-        if self.flip:
-            surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False),
-                      (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0],
-                       self.rect().centery - offset[1]))
-        else:
-            surf.blit(self.game.assets['gun'], (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]))
+        if self.weapon == 'gun':
+            if self.flip:
+                surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False),
+                          (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0],
+                           self.rect().centery - offset[1]))
+            else:
+                surf.blit(self.game.assets['gun'], (self.rect().centerx + 4 - offset[0],
+                                                    self.rect().centery - offset[1]))
+        elif self.weapon == 'shotgun':
+            if self.flip:
+                surf.blit(pygame.transform.flip(self.game.assets['shotgun'], True, False),
+                          (self.rect().centerx + 2 - self.game.assets['shotgun'].get_width() - offset[0],
+                           self.rect().centery - 5 - offset[1]))
+            else:
+                surf.blit(self.game.assets['shotgun'], (self.rect().centerx - 2 - offset[0],
+                                                        self.rect().centery - 5 - offset[1]))
+
+        elif self.weapon == 'rifle':
+            if self.flip:
+                surf.blit(pygame.transform.flip(self.game.assets['rifle'], True, False),
+                          (self.rect().centerx + 2 - self.game.assets['rifle'].get_width() - offset[0],
+                           self.rect().centery - 5 - offset[1]))
+            else:
+                surf.blit(self.game.assets['rifle'], (self.rect().centerx - 2 - offset[0],
+                                                      self.rect().centery - 5 - offset[1]))
 
 
 class Player(PhysicsEntity):
